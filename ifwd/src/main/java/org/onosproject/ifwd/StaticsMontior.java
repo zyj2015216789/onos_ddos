@@ -1,25 +1,33 @@
 package org.onosproject.ifwd;
 
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.onosproject.cfg.ComponentConfigService;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+
 
 import org.onosproject.net.Device;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.Port;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.device.PortStatistics;
+import org.onosproject.net.flow.FlowEntry;
+import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.FlowRuleStore;
 import org.onosproject.net.link.LinkService;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Text;
+
+import javax.ws.rs.GET;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
@@ -29,19 +37,25 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 @Component(immediate = true)
 public class StaticsMontior {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    private LinkService linkService;
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    private DeviceService deviceService;
-    @Reference(cardinality = ReferenceCardinality.MANDATORY_UNARY)
-    private ComponentConfigService cfgService;
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected LinkService linkService;
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected DeviceService deviceService;
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected FlowRuleService flowRuleService;
+
+    public StaticsMontior(LinkService linkService) {
+        this.linkService = linkService;
+    }
 
 
     @Activate
@@ -58,10 +72,15 @@ public class StaticsMontior {
         ArrayList valuePacketsTxD = new ArrayList();
         ArrayList valuePacketsTxE = new ArrayList();
 
+        ArrayList<Integer> shortFlow = new ArrayList();
+        ArrayList<Integer> ruleCount = new ArrayList();
+        //double shortFlowRate;
+
         for (int siempre = 0; siempre < 100; siempre++) {
             log.info("activate - INFO 1 | generateStatistics");
             generateStatistics(keyPort, valueBytesR, valueBytesS, valueDuration,
                     valuePacketsR, valuePacketsRxD, valuePacketsRxE, valuePacketsS, valuePacketsTxD, valuePacketsTxE);
+            //shortFlowRate = 0;
             keyPort.clear();
             valueBytesR.clear();
             valueBytesS.clear();
@@ -75,7 +94,26 @@ public class StaticsMontior {
             TimeUnit.SECONDS.sleep(10);
         }
     }
-
+    /*
+    * @return shortflow count for a special device;
+    * */
+    public void getStatistics(ArrayList shortFlow) {
+        log.info("collect short flow count for every device");
+        Iterable<Device> devices = deviceService.getAvailableDevices(Device.Type.SWITCH);
+        // assume that the number of switches will not exceed 500
+        String[] switchs = new String[500];
+        for(Device d: devices){
+            Iterable<FlowEntry> flowEntry = flowRuleService.getFlowEntries(d.id());
+        }
+    }
+    public void getCount(ArrayList ruleCount){
+        Iterable<Device> devices = deviceService.getAvailableDevices(Device.Type.SWITCH);
+        // assume that the number of switches will not exceed 500
+        String[] switchs = new String[500];
+        for(Device d : devices) {
+            ruleCount.add(flowRuleService.getFlowRuleCount(d.id()));
+        }
+    }
     public void generateStatistics(ArrayList keyP, ArrayList valueBR, ArrayList valueBS,
                                             ArrayList valueD, ArrayList valuePR, ArrayList valuePRD, ArrayList valuePRE,
                                    ArrayList valuePS, ArrayList valuePTD, ArrayList valuePTE) {
