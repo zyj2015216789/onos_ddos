@@ -38,6 +38,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -97,23 +98,58 @@ public class StaticsMontior {
     /*
     * @return shortflow count for a special device;
     * */
-    public void getStatistics(ArrayList shortFlow) {
+    public void getStatistics(ArrayList shortFlow, ArrayList ruleCount) {
         log.info("collect short flow count for every device");
         Iterable<Device> devices = deviceService.getAvailableDevices(Device.Type.SWITCH);
         // assume that the number of switches will not exceed 500
         String[] switchs = new String[500];
+        int a = 0;
         for(Device d: devices){
-            Iterable<FlowEntry> flowEntry = flowRuleService.getFlowEntries(d.id());
-        }
-    }
-    public void getCount(ArrayList ruleCount){
-        Iterable<Device> devices = deviceService.getAvailableDevices(Device.Type.SWITCH);
-        // assume that the number of switches will not exceed 500
-        String[] switchs = new String[500];
-        for(Device d : devices) {
+            int short_count = 0;
+            switchs[a] = d.id().toString();
+            a++;
             ruleCount.add(flowRuleService.getFlowRuleCount(d.id()));
+            Iterable<FlowEntry> flowEntry = flowRuleService.getFlowEntries(d.id());
+            for(FlowEntry f: flowEntry){
+                if(f.packets() < 3){
+                    short_count++;
+                }
+            }
+            shortFlow.add(short_count);
         }
+
     }
+    public void generateDoc(String[] switchID, ArrayList<Integer>shortFlow, ArrayList<Integer> ruleCount) throws IOException {
+        File file = new File("/feature_static.txt");
+        if(!file.exists() && !file.isDirectory()){
+            file.mkdir();
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        Writer out = new FileWriter(file,true);
+        BufferedWriter bw = new BufferedWriter(out);
+        for(int i = 0; i < shortFlow.size(); i++){
+            bw.write(switchID[i]+",");
+            bw.write(shortFlow.get(i)+",");
+            bw.write(ruleCount.get(i));
+            bw.newLine();
+            bw.flush();
+        }
+        bw.write("**************");
+        try {
+            bw.close();
+            out.close();
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+
+
+    }
+
+
     public void generateStatistics(ArrayList keyP, ArrayList valueBR, ArrayList valueBS,
                                             ArrayList valueD, ArrayList valuePR, ArrayList valuePRD, ArrayList valuePRE,
                                    ArrayList valuePS, ArrayList valuePTD, ArrayList valuePTE) {
